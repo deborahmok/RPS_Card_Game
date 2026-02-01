@@ -1371,7 +1371,7 @@ GameObject:
   - component: {fileID: 893690516}
   - component: {fileID: 893690515}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: NextRoundText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2890,6 +2890,7 @@ MonoBehaviour:
   aiText: {fileID: 860721425}
   resultText: {fileID: 355593073}
   nextRoundButton: {fileID: 1094548377}
+  nextRoundButtonLabel: {fileID: 893690515}
   rockButton: {fileID: 1667325933}
   paperButton: {fileID: 2060908320}
   scissorsButton: {fileID: 1878139948}

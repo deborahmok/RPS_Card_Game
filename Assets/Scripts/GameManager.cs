@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     
     //next round logic
     public Button nextRoundButton;
+    public TextMeshProUGUI nextRoundButtonLabel;
     int currentRound = 0;
     
     //curr round logic
@@ -53,8 +54,7 @@ public class GameManager : MonoBehaviour
     
     void Start()
     {
-        Debug.Log("Game Start");
-
+        nextRoundButtonLabel.text = "Start Game";
         nextRoundButton.onClick.AddListener(StartNextRound);
 
         rockButton.onClick.AddListener(() => OnPlayerChoose(CardType.Rock));
@@ -147,9 +147,13 @@ public class GameManager : MonoBehaviour
     
     void StartNextRound()
     {
+        nextRoundButtonLabel.text = "Next Round";
         if (currentRound >= 3)
         {
-            resultText.text = $"Game Over — Player: {playerScore}  AI: {aiScore}";
+            if (playerScore > aiScore) resultText.text = "YOU WIN!";
+            else resultText.text = "AW, NEXT TIME!";
+            //else resultText.text = "IT'S A TIE!";
+            //nextRoundButtonLabel.text = "Game Over";
             nextRoundButton.interactable = false;
             confirmPickTwoButton.interactable = false;
             ClearHandUI();
