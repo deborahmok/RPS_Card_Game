@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 
 public class GameManager : MonoBehaviour
 {
@@ -23,61 +22,89 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI nextRoundButtonLabel;
     int currentRound = 0;
     
-    //curr round logic
-    bool roundInProgress = false;
+    // Partner UI: player buttons
+    public Button rockPlayerButton;
+    public Button paperPlayerButton;
+    public Button scissorsPlayerButton;
+
+    // Partner UI: player outlines
+    public GameObject rockPlayerOutline;
+    public GameObject paperPlayerOutline;
+    public GameObject scissorsPlayerOutline;
+
+    // Partner UI: opponent cards (whole object)
+    public GameObject rockOpponentCard;
+    public GameObject paperOpponentCard;
+    public GameObject scissorsOpponentCard;
     
-    //action choice logic - old
-    CardType? playerChoice = null;
-    public Button rockButton;
-    public Button paperButton;
-    public Button scissorsButton;
+    public GameObject rockPlayerCard;
+    public GameObject paperPlayerCard;
+    public GameObject scissorsPlayerCard;
     
-    //dragging cards
-    public Transform playerHandPanel;   // drag PlayerHandPanel here
-    public Button cardButtonTemplate;   // drag CardButtonTemplate here
-    List<CardType> currentPlayerHand = new List<CardType>();
+    //integrating - picking two
+    bool pickingTwo = false;
+    bool pickingFinal = false;
+
+    System.Collections.Generic.List<CardType> selectedTwo = new System.Collections.Generic.List<CardType>();
+
     //action choice logic - new 
     public Button confirmPickTwoButton;
     public TMP_Text playerChosenText;
     public TMP_Text aiChosenText;
 
-    List<CardType> playerHand = new List<CardType>();
-    List<CardType> aiHand = new List<CardType>();
-
-    List<int> selectedIndices = new List<int>();   // which 2 cards player selected
-    List<CardType> playerChosenTwo = new List<CardType>();
     List<CardType> aiChosenTwo = new List<CardType>();
-
-    bool pickingTwo = false;
+    CardType aiFinalChoice;
     
-    bool pickingFinal = false;
+    //game done?
+    bool gameOver = false;
     
     void Start()
     {
         nextRoundButtonLabel.text = "Start Game";
         nextRoundButton.onClick.AddListener(StartNextRound);
-
-        rockButton.onClick.AddListener(() => OnPlayerChoose(CardType.Rock));
-        paperButton.onClick.AddListener(() => OnPlayerChoose(CardType.Paper));
-        scissorsButton.onClick.AddListener(() => OnPlayerChoose(CardType.Scissors));
-
+        //resultText.text = "Click Start Game to begin";
+        
+        //integrated ones
+        rockPlayerButton.onClick.AddListener(() => OnPartnerCardClicked(CardType.Rock));
+        paperPlayerButton.onClick.AddListener(() => OnPartnerCardClicked(CardType.Paper));
+        scissorsPlayerButton.onClick.AddListener(() => OnPartnerCardClicked(CardType.Scissors));
+        UpdateScoreUI();
         confirmPickTwoButton.onClick.AddListener(ConfirmPickTwo);
         confirmPickTwoButton.interactable = false;
         // Start ready state
-        SetChoiceButtonsInteractable(false);
-        resultText.text = "Click Next Round to begin";
+        SetPartnerButtonsInteractable(false);
+        HideAllPlayerOutlines();
+        HideAllOpponentCards();
     }
-
     
-    void Shuffle(List<CardType> list)
+    void ResetGame()
     {
-        for (int i = 0; i < list.Count; i++)
-        {
-            int randomIndex = Random.Range(i, list.Count);
-            CardType temp = list[i];
-            list[i] = list[randomIndex];
-            list[randomIndex] = temp;
-        }
+        currentRound = 0;
+        playerScore = 0;
+        aiScore = 0;
+        gameOver = false;
+
+        nextRoundButtonLabel.text = "Start Game";
+        nextRoundButton.interactable = true;
+        confirmPickTwoButton.interactable = false;
+
+        // reset UI
+        roundText.text = "Round 0 / 3";
+        resultText.text = "Click Start Game to begin";
+        playerChosenText.text = "Player chose: -";
+        aiChosenText.text = "AI chose: -";
+
+        UpdateScoreUI();
+
+        // reset visuals
+        SetPartnerButtonsInteractable(false);
+        HideAllPlayerOutlines();
+        HideAllOpponentCards();
+
+        // show all player cards again
+        if (rockPlayerCard) rockPlayerCard.SetActive(true);
+        if (paperPlayerCard) paperPlayerCard.SetActive(true);
+        if (scissorsPlayerCard) scissorsPlayerCard.SetActive(true);
     }
 
     int Compare(CardType player, CardType ai)
@@ -94,127 +121,52 @@ public class GameManager : MonoBehaviour
         return -1;
     }
     
-    void OnPlayerChoose(CardType choice)
-    {
-        if (!roundInProgress) return; // must have started the round
-
-        // Lock input immediately
-        roundInProgress = false;
-        SetChoiceButtonsInteractable(false);
-
-        CardType playerPick = choice;
-        CardType aiPick = (CardType)Random.Range(0, 3); // Rock/Paper/Scissors
-
-        playerText.text = $"Player: {playerPick}";
-        aiText.text = $"AI: {aiPick}";
-
-        int result = Compare(playerPick, aiPick);
-
-        if (result == 1)
-        {
-            playerScore++;
-            resultText.text = "Result: Player Wins";
-        }
-        else if (result == -1)
-        {
-            aiScore++;
-            resultText.text = "Result: AI Wins";
-        }
-        else
-        {
-            resultText.text = "Result: Tie";
-        }
-
-        Debug.Log($"Round {currentRound}: Player {playerPick} vs AI {aiPick} -> {resultText.text}");
-
-        // Allow next round
-        nextRoundButton.interactable = true;
-    }
-    
-    void SetChoiceButtonsInteractable(bool on)
-    {
-        rockButton.interactable = on;
-        paperButton.interactable = on;
-        scissorsButton.interactable = on;
-    }
-
-    void ClearRoundUI()
-    {
-        playerText.text = "Player: -";
-        aiText.text = "AI: -";
-        resultText.text = "Pick Rock / Paper / Scissors";
-    }
-    
     void StartNextRound()
     {
+        if (gameOver)
+        {
+            ResetGame();
+            return;
+        }
         nextRoundButtonLabel.text = "Next Round";
+        //re-show the damn cards
+        if (rockPlayerCard) rockPlayerCard.SetActive(true);
+        if (paperPlayerCard) paperPlayerCard.SetActive(true);
+        if (scissorsPlayerCard) scissorsPlayerCard.SetActive(true);
+        
         if (currentRound >= 3)
         {
             if (playerScore > aiScore) resultText.text = "YOU WIN!";
             else resultText.text = "AW, NEXT TIME!";
-            //else resultText.text = "IT'S A TIE!";
-            //nextRoundButtonLabel.text = "Game Over";
+
             nextRoundButton.interactable = false;
             confirmPickTwoButton.interactable = false;
-            ClearHandUI();
+
+            SetPartnerButtonsInteractable(false);
+            HideAllPlayerOutlines();
+            HideAllOpponentCards();
             return;
         }
 
         currentRound++;
-        roundInProgress = true;
         pickingTwo = true;
+        pickingFinal = false;
+
+        selectedTwo.Clear();
+        HideAllPlayerOutlines();
+        HideAllOpponentCards();
+
+        SetPartnerButtonsInteractable(true);
 
         roundText.text = $"Round {currentRound} / 3";
-        playerText.text = "Player: -";
-        aiText.text = "AI: -";
+        UpdateScoreUI();
         resultText.text = "Pick 2 cards";
 
         playerChosenText.text = "Player chose: -";
         aiChosenText.text = "AI chose: -";
 
-        // reset selection
-        selectedIndices.Clear();
-        playerChosenTwo.Clear();
-        aiChosenTwo.Clear();
-
         confirmPickTwoButton.interactable = false;
         nextRoundButton.interactable = false;
-
-        // Deal both hands
-        List<CardType> deck = BuildDeck();
-        Shuffle(deck);
-
-        playerHand = deck.GetRange(0, 3);
-        aiHand = deck.GetRange(3, 3);
-
-        // Render player's 3 buttons
-        ClearHandUI();
-
-        for (int i = 0; i < playerHand.Count; i++)
-        {
-            int idx = i;
-            CardType card = playerHand[i];
-
-            Button b = Instantiate(cardButtonTemplate, playerHandPanel);
-            b.gameObject.SetActive(true);
-
-            TMP_Text label = b.GetComponentInChildren<TMP_Text>();
-            if (label) label.text = card.ToString();
-
-            b.onClick.RemoveAllListeners();
-            b.onClick.AddListener(() => ToggleSelect(idx, b));
-        }
-    }
-    
-    //clicking the cards
-    List<CardType> BuildDeck()
-    {
-        return new List<CardType>()
-        {
-            CardType.Rock, CardType.Rock, CardType.Rock,
-            CardType.Paper, CardType.Paper, CardType.Paper,
-            CardType.Scissors, CardType.Scissors, CardType.Scissors
-        };
     }
 
     void Shuffle<T>(List<T> list)
@@ -225,112 +177,97 @@ public class GameManager : MonoBehaviour
             (list[i], list[r]) = (list[r], list[i]);
         }
     }
-
-    void ClearHandUI()
-    {
-        // delete all spawned card buttons (but keep the hidden template)
-        for (int i = playerHandPanel.childCount - 1; i >= 0; i--)
-        {
-            Transform child = playerHandPanel.GetChild(i);
-            if (child.gameObject != cardButtonTemplate.gameObject)
-                Destroy(child.gameObject);
-        }
-    }
     
-    void ToggleSelect(int idx, Button button)
+    void OnPartnerCardClicked(CardType card)
     {
-        if (!pickingTwo) return;
-
-        if (selectedIndices.Contains(idx))
+        // Pick 2 phase
+        if (pickingTwo)
         {
-            selectedIndices.Remove(idx);
-            // simple visual: reset color
-            button.image.color = Color.white;
-        }
-        else
-        {
-            if (selectedIndices.Count >= 2) return; // keep it simple for now
-            selectedIndices.Add(idx);
-            // simple visual: highlight selected
-            button.image.color = new Color(0.8f, 0.9f, 1f); // light tint
+            if (selectedTwo.Contains(card))
+            {
+                selectedTwo.Remove(card);
+                SetOutline(card, false);
+            }
+            else
+            {
+                // ENFORCE MAX 2
+                if (selectedTwo.Count >= 2) return;
+
+                selectedTwo.Add(card);
+                SetOutline(card, true);
+            }
+
+            confirmPickTwoButton.interactable = (selectedTwo.Count == 2);
+            return;
         }
 
-        confirmPickTwoButton.interactable = (selectedIndices.Count == 2);
+        // Final pick phase
+        if (pickingFinal)
+        {
+            // only allow choosing one of the two you picked earlier
+            if (!selectedTwo.Contains(card)) return;
+
+            ResolveFinalPick(card);
+            return;
+        }
     }
-
+   
     void ConfirmPickTwo()
     {
         if (!pickingTwo) return;
-        if (selectedIndices.Count != 2) return;
+        if (selectedTwo.Count != 2) return;
 
         pickingTwo = false;
         confirmPickTwoButton.interactable = false;
 
-        // Lock the hand UI (prevent more clicks)
-        for (int i = 0; i < playerHandPanel.childCount; i++)
-        {
-            var child = playerHandPanel.GetChild(i).GetComponent<Button>();
-            if (child && child.gameObject != cardButtonTemplate.gameObject)
-                child.interactable = false;
-        }
+        // After confirming, only allow the chosen two to be clicked for final pick
+        pickingFinal = true;
+        // Hide the unchosen player card (show only the chosen two)
+        HideAllPlayerCards();
+        ShowPlayerCard(selectedTwo[0], true);
+        ShowPlayerCard(selectedTwo[1], true);
 
-        // Player chosen 2
-        playerChosenTwo.Clear();
-        playerChosenTwo.Add(playerHand[selectedIndices[0]]);
-        playerChosenTwo.Add(playerHand[selectedIndices[1]]);
-
-        // AI chooses 2 randomly from its 3
-        List<int> aiIdx = new List<int> { 0, 1, 2 };
-        Shuffle(aiIdx);
+        // AI chooses 2 out of {Rock, Paper, Scissors} randomly
+        List<CardType> all = new List<CardType> { CardType.Rock, CardType.Paper, CardType.Scissors };
+        Shuffle(all); // reuse your Shuffle(List<T>) method
         aiChosenTwo.Clear();
-        aiChosenTwo.Add(aiHand[aiIdx[0]]);
-        aiChosenTwo.Add(aiHand[aiIdx[1]]);
+        aiChosenTwo.Add(all[0]);
+        aiChosenTwo.Add(all[1]);
 
-        // Reveal
-        playerChosenText.text = $"Player chose: {playerChosenTwo[0]}, {playerChosenTwo[1]}";
+        // Reveal text
+        playerChosenText.text = $"Player chose: {selectedTwo[0]}, {selectedTwo[1]}";
         aiChosenText.text = $"AI chose: {aiChosenTwo[0]}, {aiChosenTwo[1]}";
 
-        resultText.text = "Chosen cards revealed (Step 7 = pick final 1)";
-        nextRoundButton.interactable = false;
-        //till here is logic for picking two cards
-        
-        // Prepare for final pick
-        ClearHandUI();
-        pickingFinal = true;
+        // Show opponent chosen cards visually
+        HideAllOpponentCards();
+        ShowOpponentCard(aiChosenTwo[0], true);
+        ShowOpponentCard(aiChosenTwo[1], true);
 
+        // UI instruction
         resultText.text = "Pick your final card";
 
-        // Show only the chosen 2 as buttons
-        for (int i = 0; i < playerChosenTwo.Count; i++)
-        {
-            CardType card = playerChosenTwo[i];
-
-            Button b = Instantiate(cardButtonTemplate, playerHandPanel);
-            b.gameObject.SetActive(true);
-
-            TMP_Text label = b.GetComponentInChildren<TMP_Text>();
-            if (label) label.text = card.ToString();
-
-            b.onClick.RemoveAllListeners();
-            b.onClick.AddListener(() => OnFinalPick(card));
-        }
+        // Only allow clicking the two chosen cards now
+        rockPlayerButton.interactable = selectedTwo.Contains(CardType.Rock);
+        paperPlayerButton.interactable = selectedTwo.Contains(CardType.Paper);
+        scissorsPlayerButton.interactable = selectedTwo.Contains(CardType.Scissors);
     }
     
-    void OnFinalPick(CardType playerFinal)
+    void ResolveFinalPick(CardType playerFinal)
     {
         if (!pickingFinal) return;
-
         pickingFinal = false;
 
-        // Lock buttons
-        ClearHandUI();
+        aiFinalChoice = aiChosenTwo[Random.Range(0, aiChosenTwo.Count)];
 
-        CardType aiFinal = aiChosenTwo[Random.Range(0, aiChosenTwo.Count)];
+        // Hide all cards first
+        HideAllPlayerCards();
+        HideAllOpponentCards();
 
-        playerText.text = $"Player: {playerFinal}";
-        aiText.text = $"AI: {aiFinal}";
+        // Show only final cards
+        ShowPlayerCard(playerFinal, true);
+        ShowOpponentCard(aiFinalChoice, true);
 
-        int result = Compare(playerFinal, aiFinal);
+        int result = Compare(playerFinal, aiFinalChoice);
 
         if (result == 1)
         {
@@ -347,6 +284,87 @@ public class GameManager : MonoBehaviour
             resultText.text = "Result: Tie";
         }
 
+        UpdateScoreUI();
+        if (currentRound >= 3)
+        {
+            // show final message immediately
+            if (playerScore > aiScore) resultText.text = "YOU WIN!";
+            else if (playerScore < aiScore) resultText.text = "AW, NEXT TIME!";
+            else resultText.text = "OU, TIE!";
+
+            gameOver = true;
+            nextRoundButtonLabel.text = "Start Game";
+            nextRoundButton.interactable = true;
+            confirmPickTwoButton.interactable = false;
+
+            // lock partner buttons since game ended
+            SetPartnerButtonsInteractable(false);
+            return;
+        }
         nextRoundButton.interactable = true;
+    }
+    
+    void UpdateScoreUI()
+    {
+        playerText.text = $"Player: {playerScore}";
+        aiText.text = $"AI: {aiScore}";
+    }
+    
+    void SetPartnerButtonsInteractable(bool on)
+    {
+        if (rockPlayerButton) rockPlayerButton.interactable = on;
+        if (paperPlayerButton) paperPlayerButton.interactable = on;
+        if (scissorsPlayerButton) scissorsPlayerButton.interactable = on;
+    }
+
+    void HideAllPlayerOutlines()
+    {
+        if (rockPlayerOutline) rockPlayerOutline.SetActive(false);
+        if (paperPlayerOutline) paperPlayerOutline.SetActive(false);
+        if (scissorsPlayerOutline) scissorsPlayerOutline.SetActive(false);
+    }
+
+    void HideAllOpponentCards()
+    {
+        if (rockOpponentCard) rockOpponentCard.SetActive(false);
+        if (paperOpponentCard) paperOpponentCard.SetActive(false);
+        if (scissorsOpponentCard) scissorsOpponentCard.SetActive(false);
+    }
+    
+    void ShowOpponentCard(CardType type, bool on)
+    {
+        switch (type)
+        {
+            case CardType.Rock: if (rockOpponentCard) rockOpponentCard.SetActive(on); break;
+            case CardType.Paper: if (paperOpponentCard) paperOpponentCard.SetActive(on); break;
+            case CardType.Scissors: if (scissorsOpponentCard) scissorsOpponentCard.SetActive(on); break;
+        }
+    }
+    
+    void SetOutline(CardType type, bool on)
+    {
+        switch (type)
+        {
+            case CardType.Rock: if (rockPlayerOutline) rockPlayerOutline.SetActive(on); break;
+            case CardType.Paper: if (paperPlayerOutline) paperPlayerOutline.SetActive(on); break;
+            case CardType.Scissors: if (scissorsPlayerOutline) scissorsPlayerOutline.SetActive(on); break;
+        }
+    }
+    
+    void HideAllPlayerCards()
+    {
+        if (rockPlayerCard) rockPlayerCard.SetActive(false);
+        if (paperPlayerCard) paperPlayerCard.SetActive(false);
+        if (scissorsPlayerCard) scissorsPlayerCard.SetActive(false);
+    }
+
+    void ShowPlayerCard(CardType t, bool on)
+    {
+        switch (t)
+        {
+            case CardType.Rock: if (rockPlayerCard) rockPlayerCard.SetActive(on); break;
+            case CardType.Paper: if (paperPlayerCard) paperPlayerCard.SetActive(on); break;
+            case CardType.Scissors: if (scissorsPlayerCard) scissorsPlayerCard.SetActive(on); break;
+        }
     }
 }
