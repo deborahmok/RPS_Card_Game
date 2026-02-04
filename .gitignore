@@ -16,3 +16,10 @@
 
 # OS junk
 .DS_Store
+Logs/
+UserSettings/
+Library/
+Temp/
+Obj/
+Build/
+Builds/
