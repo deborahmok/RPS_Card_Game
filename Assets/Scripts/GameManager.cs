@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public class GameManager : MonoBehaviour
 {
@@ -369,5 +370,25 @@ public class GameManager : MonoBehaviour
             case CardType.Paper: if (paperPlayerCard) paperPlayerCard.SetActive(on); break;
             case CardType.Scissors: if (scissorsPlayerCard) scissorsPlayerCard.SetActive(on); break;
         }
+    }
+    
+    void Update()
+    {
+        if (Keyboard.current == null) return;
+
+        if (Keyboard.current.rKey.wasPressedThisFrame)
+            ResetGame();
+
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+            QuitGame();
+    }
+    
+    void QuitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+    Application.Quit();
+#endif
     }
 }
