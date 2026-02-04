@@ -58,6 +58,9 @@ public class GameManager : MonoBehaviour
     //game done?
     bool gameOver = false;
     
+    //audio
+    public UISFX audioSfx;
+    
     void Start()
     {
         nextRoundButtonLabel.text = "Start Game";
@@ -212,26 +215,6 @@ public class GameManager : MonoBehaviour
         }
     }
    
-    void SetCardSelectedVisual(CardType card, bool selected)
-    {
-        // 1) Outline
-        SetOutline(card, selected);
-
-        // 2) Button tint (very obvious)
-        Button b = null;
-        switch (card)
-        {
-            case CardType.Rock: b = rockPlayerButton; break;
-            case CardType.Paper: b = paperPlayerButton; break;
-            case CardType.Scissors: b = scissorsPlayerButton; break;
-        }
-
-        if (b != null && b.image != null)
-        {
-            b.image.color = selected ? new Color(0.7f, 0.9f, 1f) : Color.white;
-        }
-    }
-    
     void ConfirmPickTwo()
     {
         if (!pickingTwo) return;
@@ -310,7 +293,7 @@ public class GameManager : MonoBehaviour
             // show final message immediately
             if (playerScore > aiScore) resultText.text = "YOU WIN!";
             else if (playerScore < aiScore) resultText.text = "AW, NEXT TIME!";
-            else resultText.text = "YOU TIE!";
+            else resultText.text = "OU, TIE!";
 
             gameOver = true;
             nextRoundButtonLabel.text = "Start Game";
