@@ -310,7 +310,7 @@ public class GameManager : MonoBehaviour
             // show final message immediately
             if (playerScore > aiScore) resultText.text = "YOU WIN!";
             else if (playerScore < aiScore) resultText.text = "AW, NEXT TIME!";
-            else resultText.text = "OU, TIE!";
+            else resultText.text = "YOU TIE!";
 
             gameOver = true;
             nextRoundButtonLabel.text = "Start Game";
