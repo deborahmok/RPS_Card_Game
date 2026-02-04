@@ -212,6 +212,26 @@ public class GameManager : MonoBehaviour
         }
     }
    
+    void SetCardSelectedVisual(CardType card, bool selected)
+    {
+        // 1) Outline
+        SetOutline(card, selected);
+
+        // 2) Button tint (very obvious)
+        Button b = null;
+        switch (card)
+        {
+            case CardType.Rock: b = rockPlayerButton; break;
+            case CardType.Paper: b = paperPlayerButton; break;
+            case CardType.Scissors: b = scissorsPlayerButton; break;
+        }
+
+        if (b != null && b.image != null)
+        {
+            b.image.color = selected ? new Color(0.7f, 0.9f, 1f) : Color.white;
+        }
+    }
+    
     void ConfirmPickTwo()
     {
         if (!pickingTwo) return;
